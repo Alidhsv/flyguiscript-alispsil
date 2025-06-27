@@ -1,0 +1,227 @@
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+local flying = false
+local speed = 60
+local direction = Vector3.zero
+local keysDown = {}
+
+-- 📦 GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "FlyGui"
+gui.ResetOnSpawn = false
+
+-- 🟦 زر فتح القائمة
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Size = UDim2.new(0, 150, 0, 40)
+openBtn.Position = UDim2.new(0, 20, 0.5, -20)
+openBtn.BackgroundColor3 = Color3.fromRGB(30, 150, 255)
+openBtn.Text = "Open Fly Menu"
+openBtn.Font = Enum.Font.GothamBold
+openBtn.TextSize = 18
+openBtn.TextColor3 = Color3.new(1, 1, 1)
+openBtn.Draggable = true
+openBtn.Active = true
+openBtn.BorderSizePixel = 0
+
+-- 🖥️ القائمة
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 320, 0, 240)
+frame.Position = UDim2.new(0.5, -160, 0.5, -120)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+frame.BorderSizePixel = 0
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "FlyGUI@alispsil"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.BackgroundTransparency = 1
+
+local flyBtn = Instance.new("TextButton", frame)
+flyBtn.Size = UDim2.new(0.8, 0, 0, 45)
+flyBtn.Position = UDim2.new(0.1, 0, 0, 60)
+flyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+flyBtn.Text = "Start Flying"
+flyBtn.Font = Enum.Font.GothamBold
+flyBtn.TextSize = 20
+flyBtn.TextColor3 = Color3.new(1,1,1)
+flyBtn.BorderSizePixel = 0
+Instance.new("UICorner", flyBtn).CornerRadius = UDim.new(0, 8)
+
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0.25, 0, 0, 30)
+closeBtn.Position = UDim2.new(0.72, 0, 0, 7)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "Close"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.BorderSizePixel = 0
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+-- سرعة الطيران
+local speedLabel = Instance.new("TextLabel", frame)
+speedLabel.Size = UDim2.new(0.6, 0, 0, 30)
+speedLabel.Position = UDim2.new(0.2, 0, 0, 115)
+speedLabel.Text = "Speed: " .. speed
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextSize = 18
+speedLabel.TextColor3 = Color3.new(1, 1, 1)
+speedLabel.BackgroundTransparency = 1
+
+local increaseBtn = Instance.new("TextButton", frame)
+increaseBtn.Size = UDim2.new(0.2, 0, 0, 30)
+increaseBtn.Position = UDim2.new(0.1, 0, 0, 150)
+increaseBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+increaseBtn.Text = "+"
+increaseBtn.Font = Enum.Font.GothamBold
+increaseBtn.TextSize = 20
+increaseBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", increaseBtn).CornerRadius = UDim.new(0, 6)
+
+local decreaseBtn = Instance.new("TextButton", frame)
+decreaseBtn.Size = UDim2.new(0.2, 0, 0, 30)
+decreaseBtn.Position = UDim2.new(0.7, 0, 0, 150)
+decreaseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+decreaseBtn.Text = "-"
+decreaseBtn.Font = Enum.Font.GothamBold
+decreaseBtn.TextSize = 20
+decreaseBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", decreaseBtn).CornerRadius = UDim.new(0, 6)
+
+local speedInput = Instance.new("TextBox", frame)
+speedInput.Size = UDim2.new(0.3, 0, 0, 30)
+speedInput.Position = UDim2.new(0.35, 0, 0, 150)
+speedInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+speedInput.TextColor3 = Color3.new(1, 1, 1)
+speedInput.Font = Enum.Font.GothamBold
+speedInput.TextSize = 18
+speedInput.Text = tostring(speed)
+speedInput.ClearTextOnFocus = false
+speedInput.PlaceholderText = "Set Speed"
+Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 6)
+
+-- 💨 دوال الطيران
+local function updateDirection()
+	local dir = Vector3.zero
+	if keysDown["W"] then dir += Vector3.new(0, 0, -1) end
+	if keysDown["S"] then dir += Vector3.new(0, 0, 1) end
+	if keysDown["A"] then dir += Vector3.new(-1, 0, 0) end
+	if keysDown["D"] then dir += Vector3.new(1, 0, 0) end
+	if keysDown["Space"] then dir += Vector3.new(0, 1, 0) end
+	if keysDown["Shift"] then dir += Vector3.new(0, -1, 0) end
+	direction = dir.Magnitude > 0 and dir.Unit or Vector3.zero
+end
+
+local function startFlying()
+	if flying then return end
+	flying = true
+
+	local bv = Instance.new("BodyVelocity", hrp)
+	bv.Name = "FlyVelocity"
+	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+	bv.Velocity = Vector3.zero
+
+	local bg = Instance.new("BodyGyro", hrp)
+	bg.Name = "FlyGyro"
+	bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+	bg.P = 9e4
+	bg.D = 500
+	bg.CFrame = hrp.CFrame
+
+	RunService.RenderStepped:Connect(function()
+		if flying then
+			local cam = workspace.CurrentCamera
+			bg.CFrame = cam.CFrame
+			updateDirection()
+			bv.Velocity = cam.CFrame:VectorToWorldSpace(direction) * speed
+		end
+	end)
+end
+
+local function stopFlying()
+	flying = false
+	if hrp:FindFirstChild("FlyVelocity") then hrp.FlyVelocity:Destroy() end
+	if hrp:FindFirstChild("FlyGyro") then hrp.FlyGyro:Destroy() end
+end
+
+-- 🕹️ تحكم بالأزرار
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local key = input.KeyCode
+		if key == Enum.KeyCode.W then keysDown["W"] = true end
+		if key == Enum.KeyCode.S then keysDown["S"] = true end
+		if key == Enum.KeyCode.A then keysDown["A"] = true end
+		if key == Enum.KeyCode.D then keysDown["D"] = true end
+		if key == Enum.KeyCode.Space then keysDown["Space"] = true end
+		if key == Enum.KeyCode.LeftShift then keysDown["Shift"] = true end
+	end
+end)
+
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local key = input.KeyCode
+		if key == Enum.KeyCode.W then keysDown["W"] = false end
+		if key == Enum.KeyCode.S then keysDown["S"] = false end
+		if key == Enum.KeyCode.A then keysDown["A"] = false end
+		if key == Enum.KeyCode.D then keysDown["D"] = false end
+		if key == Enum.KeyCode.Space then keysDown["Space"] = false end
+		if key == Enum.KeyCode.LeftShift then keysDown["Shift"] = false end
+	end
+end)
+
+-- 🔘 أزرار الواجهة
+openBtn.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+	if flying then
+		stopFlying()
+		flyBtn.Text = "Start Flying"
+	else
+		startFlying()
+		flyBtn.Text = "Stop Flying"
+	end
+end)
+
+-- تحديث السرعة من النص المكتوب
+speedInput.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local val = tonumber(speedInput.Text)
+		if val and val >= 10 then
+			speed = val
+			speedLabel.Text = "Speed: " .. speed
+		else
+			speedInput.Text = tostring(speed) -- ارجع النص القديم اذا القيمة غلط
+		end
+	end
+end)
+
+increaseBtn.MouseButton1Click:Connect(function()
+	speed += 10
+	speedLabel.Text = "Speed: " .. speed
+	speedInput.Text = tostring(speed)
+end)
+
+decreaseBtn.MouseButton1Click:Connect(function()
+	speed = math.max(10, speed - 10)
+	speedLabel.Text = "Speed: " .. speed
+	speedInput.Text = tostring(speed)
+end)
